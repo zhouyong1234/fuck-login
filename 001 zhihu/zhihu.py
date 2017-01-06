@@ -30,6 +30,8 @@ except:
 # 构造 Request headers
 agent = 'Mozilla/5.0 (Windows NT 5.1; rv:33.0) Gecko/20100101 Firefox/33.0'
 headers = {
+    "Host": "www.zhihu.com",
+    "Referer": "https://www.zhihu.com/",
     'User-Agent': agent
 }
 
@@ -44,7 +46,7 @@ except:
 
 def get_xsrf():
     '''_xsrf 是一个动态变化的参数'''
-    index_url = 'http://www.zhihu.com'
+    index_url = 'https://www.zhihu.com'
     # 获取登录时需要用到的_xsrf
     index_page = session.get(index_url, headers=headers)
     html = index_page.text
@@ -56,8 +58,8 @@ def get_xsrf():
 
 # 获取验证码
 def get_captcha():
-    t = str(int(time.time()*1000))
-    captcha_url = 'http://www.zhihu.com/captcha.gif?r=' + t + "&type=login"
+    t = str(int(time.time() * 1000))
+    captcha_url = 'https://www.zhihu.com/captcha.gif?r=' + t + "&type=login"
     r = session.get(captcha_url, headers=headers)
     with open('captcha.jpg', 'wb') as f:
         f.write(r.content)
@@ -77,19 +79,18 @@ def get_captcha():
 def isLogin():
     # 通过查看用户个人信息来判断是否已经登录
     url = "https://www.zhihu.com/settings/profile"
-    login_code = session.get(url,allow_redirects=False).status_code
-    if int(x=login_code) == 200:
+    login_code = session.get(url, headers=headers, allow_redirects=False).status_code
+    if login_code == 200:
         return True
     else:
         return False
-
 
 
 def login(secret, account):
     # 通过输入的用户名判断是否是手机号
     if re.match(r"^1\d{10}$", account):
         print("手机号登录 \n")
-        post_url = 'http://www.zhihu.com/login/phone_num'
+        post_url = 'https://www.zhihu.com/login/phone_num'
         postdata = {
             '_xsrf': get_xsrf(),
             'password': secret,
@@ -97,8 +98,12 @@ def login(secret, account):
             'phone_num': account,
         }
     else:
-        print("邮箱登录 \n")
-        post_url = 'http://www.zhihu.com/login/email'
+        if "@" in account:
+            print("邮箱登录 \n")
+        else:
+            print("你的账号输入有问题，请重新登录")
+            return 0
+        post_url = 'https://www.zhihu.com/login/email'
         postdata = {
             '_xsrf': get_xsrf(),
             'password': secret,
@@ -109,7 +114,7 @@ def login(secret, account):
         # 不需要验证码直接登录成功
         login_page = session.post(post_url, data=postdata, headers=headers)
         login_code = login_page.text
-        print(login_page.status)
+        print(login_page.status_code)
         print(login_code)
     except:
         # 需要输入验证码后才能登录成功
